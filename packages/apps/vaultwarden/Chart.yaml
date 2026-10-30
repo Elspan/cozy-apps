@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vaultwarden
+description: Managed Vaultwarden password manager, compatible with Bitwarden clients
+type: application
+version: 0.0.0
+appVersion: "1.37.4"

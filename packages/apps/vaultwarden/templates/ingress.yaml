@@ -1,0 +1,46 @@
+{{- $namespace := .Values._namespace | default dict }}
+{{- $cluster := .Values._cluster | default dict }}
+{{- if not $namespace.gateway }}
+{{- $ingress := $namespace.ingress }}
+{{- $host := include "vaultwarden.host" . }}
+{{- $solver := index $cluster "solver" | default "http01" }}
+{{- $clusterIssuer := index $cluster "issuer-name" | default "letsencrypt-prod" }}
+{{- $wildcardSecret := index $cluster "wildcard-secret-name" | default "" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  annotations:
+    # Bitwarden clients cap attachments at 500 MB.
+    nginx.ingress.kubernetes.io/proxy-body-size: "525m"
+    # Keep the /notifications/hub websocket open between server pings.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- /* Operator wildcard mode: nginx serves the default SSL cert, so skip per-host ACME. */}}
+    {{- if not $wildcardSecret }}
+    {{- if eq $solver "http01" }}
+    acme.cert-manager.io/http01-ingress-ingressclassname: {{ $ingress }}
+    {{- end }}
+    cert-manager.io/cluster-issuer: {{ $clusterIssuer }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $ingress }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      {{- if not $wildcardSecret }}
+      secretName: {{ .Release.Name }}-ingress-tls
+      {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}
+                port:
+                  name: http
+{{- end }}

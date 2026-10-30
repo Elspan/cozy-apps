@@ -1,0 +1,129 @@
+{{- $gateway := (.Values._namespace | default dict).gateway | default "" }}
+{{- $cpu := .Values.resources.cpu | default "500m" }}
+{{- $memory := .Values.resources.memory | default "256Mi" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "vaultwarden.selectorLabels" . | nindent 4 }}
+spec:
+  # SQLite on a ReadWriteOnce volume: never run two pods against the same data.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "vaultwarden.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vaultwarden.selectorLabels" . | nindent 8 }}
+      annotations:
+        # The SMTP password reaches the pod through a secret, so changing it
+        # would not roll the pod on its own.
+        checksum/smtp-password: {{ .Values.smtp.password | sha256sum }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: vaultwarden
+          image: ghcr.io/dani-garcia/vaultwarden:{{ .Chart.AppVersion }}
+          env:
+            - name: DOMAIN
+              value: https://{{ include "vaultwarden.host" . }}
+            # The image listens on 80, which a non-root user cannot bind.
+            - name: ROCKET_PORT
+              value: "8080"
+            {{- if $gateway }}
+            # Gateway API implementations set X-Forwarded-For, not X-Real-IP.
+            - name: IP_HEADER
+              value: X-Forwarded-For
+            {{- end }}
+            - name: SIGNUPS_ALLOWED
+              value: {{ .Values.signupsAllowed | quote }}
+            {{- with .Values.signupsDomainsWhitelist }}
+            - name: SIGNUPS_DOMAINS_WHITELIST
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: INVITATIONS_ALLOWED
+              value: {{ .Values.invitationsAllowed | quote }}
+            {{- if .Values.adminPanel }}
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-credentials
+                  key: admin-token
+            {{- end }}
+            {{- with .Values.smtp }}
+            {{- if .host }}
+            - name: SMTP_HOST
+              value: {{ .host | quote }}
+            - name: SMTP_SECURITY
+              value: {{ .security | default "starttls" | quote }}
+            {{- with .port }}
+            - name: SMTP_PORT
+              value: {{ . | quote }}
+            {{- end }}
+            - name: SMTP_FROM
+              value: {{ required "smtp.from is required when smtp.host is set" .from | quote }}
+            {{- with .username }}
+            - name: SMTP_USERNAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .password }}
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-credentials
+                  key: smtp-password
+            {{- end }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          # /alive also checks the database connection.
+          startupProbe:
+            httpGet:
+              path: /alive
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: {{ $cpu | quote }}
+              memory: {{ $memory | quote }}
+            limits:
+              cpu: {{ $cpu | quote }}
+              memory: {{ $memory | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-data

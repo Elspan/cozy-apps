@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmChart
+metadata:
+  name: cozy-apps-vaultwarden
+  namespace: cozy-public
+spec:
+  interval: 5m
+  chart: ./packages/apps/vaultwarden
+  sourceRef:
+    kind: GitRepository
+    name: cozy-apps
+  reconcileStrategy: Revision

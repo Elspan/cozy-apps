@@ -1,0 +1,18 @@
+---
+apiVersion: apps.cozystack.io/v1alpha1
+kind: Vaultwarden
+metadata:
+  name: passwords
+  namespace: tenant-root
+spec:
+  size: 2Gi
+  signupsAllowed: false
+  # Colleagues with an @example.org address can create an account themselves.
+  signupsDomainsWhitelist:
+    - example.org
+  smtp:
+    host: smtp.example.org
+    security: starttls
+    from: vaultwarden@example.org
+    username: vaultwarden@example.org
+    password: change-me

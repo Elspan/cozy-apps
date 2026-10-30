@@ -1,0 +1,66 @@
+##
+## @section Common parameters
+##
+
+## @param {string} [host] - Hostname for external access to Vaultwarden (defaults to `vaultwarden-<name>` subdomain of the tenant host).
+host: ""
+
+## @param {quantity} size - Persistent Volume size for the vault data (SQLite database, attachments and sends).
+size: 1Gi
+
+## @param {string} storageClass - StorageClass used to store the data.
+## @immutable
+## @x-cozystack-options {source: storageclass}
+storageClass: ""
+
+## @typedef {struct} Resources - Resource configuration.
+## @field {quantity} [cpu] - Number of CPU cores allocated.
+## @field {quantity} [memory] - Amount of memory allocated.
+
+## @param {Resources} resources - CPU and memory for the Vaultwarden container, applied as both requests and limits.
+resources:
+  cpu: 500m
+  memory: 256Mi
+
+##
+## @section Account settings
+##
+
+## @param {bool} signupsAllowed - Allow anyone who can reach the instance to create an account. When disabled, new users are invited from the admin panel or by an organization admin.
+signupsAllowed: false
+
+## @param {[]string} signupsDomainsWhitelist - Email domains whose users can sign up even when `signupsAllowed` is disabled (e.g. `example.org`).
+signupsDomainsWhitelist: []
+
+## @param {bool} invitationsAllowed - Allow organization owners and admins to invite new users.
+invitationsAllowed: true
+
+## @param {bool} adminPanel - Enable the `/admin` panel. Its token is stored in the `admin-token` key of the `vaultwarden-<name>-credentials` secret.
+adminPanel: true
+
+##
+## @section SMTP configuration
+##
+
+## @enum {string} SmtpSecurity - Security of the connection to the SMTP server.
+## @value starttls
+## @value force_tls
+## @value off
+
+## @typedef {struct} Smtp - Outgoing mail server.
+## @field {string} [host] - SMTP server hostname. Leave empty to disable email.
+## @field {int} [port] - SMTP server port. Defaults to 587, 465 or 25 depending on `security`.
+## @minimum 1
+## @maximum 65535
+## @field {SmtpSecurity} [security] - Connection security.
+## @field {string} [from] - Sender address. Required when `host` is set.
+## @field {string} [username] - SMTP username.
+## @field {string} [password] - SMTP password.
+
+## @param {Smtp} smtp - Outgoing mail, used for invitations, email verification, email 2FA and password hints.
+smtp:
+  host: ""
+  security: starttls
+  from: ""
+  username: ""
+  password: ""

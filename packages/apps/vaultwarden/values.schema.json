@@ -1,0 +1,140 @@
+{
+  "title": "Chart Values",
+  "type": "object",
+  "properties": {
+    "host": {
+      "description": "Hostname for external access to Vaultwarden (defaults to `vaultwarden-<name>` subdomain of the tenant host).",
+      "type": "string",
+      "default": ""
+    },
+    "size": {
+      "description": "Persistent Volume size for the vault data (SQLite database, attachments and sends).",
+      "default": "1Gi",
+      "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "x-kubernetes-int-or-string": true
+    },
+    "storageClass": {
+      "description": "StorageClass used to store the data.",
+      "type": "string",
+      "default": "",
+      "x-kubernetes-validations": [
+        {
+          "rule": "self == oldSelf",
+          "message": "storageClass is immutable"
+        }
+      ],
+      "x-cozystack-options": {
+        "source": "storageclass"
+      }
+    },
+    "resources": {
+      "description": "CPU and memory for the Vaultwarden container, applied as both requests and limits.",
+      "type": "object",
+      "default": {},
+      "properties": {
+        "cpu": {
+          "description": "Number of CPU cores allocated.",
+          "default": "500m",
+          "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "x-kubernetes-int-or-string": true
+        },
+        "memory": {
+          "description": "Amount of memory allocated.",
+          "default": "256Mi",
+          "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "x-kubernetes-int-or-string": true
+        }
+      }
+    },
+    "signupsAllowed": {
+      "description": "Allow anyone who can reach the instance to create an account. When disabled, new users are invited from the admin panel or by an organization admin.",
+      "type": "boolean",
+      "default": false
+    },
+    "signupsDomainsWhitelist": {
+      "description": "Email domains whose users can sign up even when `signupsAllowed` is disabled (e.g. `example.org`).",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "invitationsAllowed": {
+      "description": "Allow organization owners and admins to invite new users.",
+      "type": "boolean",
+      "default": true
+    },
+    "adminPanel": {
+      "description": "Enable the `/admin` panel. Its token is stored in the `admin-token` key of the `vaultwarden-<name>-credentials` secret.",
+      "type": "boolean",
+      "default": true
+    },
+    "smtp": {
+      "description": "Outgoing mail, used for invitations, email verification, email 2FA and password hints.",
+      "type": "object",
+      "default": {},
+      "properties": {
+        "host": {
+          "description": "SMTP server hostname. Leave empty to disable email.",
+          "type": "string",
+          "default": ""
+        },
+        "port": {
+          "description": "SMTP server port. Defaults to 587, 465 or 25 depending on `security`.",
+          "type": "integer",
+          "maximum": 65535,
+          "minimum": 1
+        },
+        "security": {
+          "description": "Connection security.",
+          "type": "string",
+          "default": "starttls",
+          "enum": [
+            "starttls",
+            "force_tls",
+            "off"
+          ]
+        },
+        "from": {
+          "description": "Sender address. Required when `host` is set.",
+          "type": "string",
+          "default": ""
+        },
+        "username": {
+          "description": "SMTP username.",
+          "type": "string",
+          "default": ""
+        },
+        "password": {
+          "description": "SMTP password.",
+          "type": "string",
+          "default": ""
+        }
+      }
+    }
+  }
+}
